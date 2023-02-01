@@ -26,7 +26,7 @@ import 'package:lichess_mobile/src/utils/style.dart';
 import 'package:lichess_mobile/src/widgets/buttons.dart';
 import 'package:lichess_mobile/src/widgets/feedback.dart';
 import 'package:lichess_mobile/src/widgets/platform.dart';
-import 'package:lichess_mobile/src/widgets/user.dart';
+import 'package:lichess_mobile/src/widgets/user_widgets.dart';
 
 import '../../auth/data/auth_repository.dart';
 
@@ -360,7 +360,8 @@ class RecentGames extends ConsumerWidget {
                 },
                 leading: Icon(game.perf.icon),
                 title: ListTileUser(
-                  user: LightUser(name: opponentName, title: opponent.title),
+                  userName: opponentName,
+                  title: opponent.title,
                   rating: opponent.rating,
                 ),
                 subtitle: Text(
