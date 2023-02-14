@@ -1,0 +1,144 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:mocktail/mocktail.dart';
+import 'package:logging/logging.dart';
+import 'package:http/http.dart' as http;
+
+import 'package:lichess_mobile/src/common/api_client.dart';
+import 'package:lichess_mobile/src/constants.dart';
+import 'package:lichess_mobile/src/common/models.dart';
+import 'package:lichess_mobile/src/ui/user/user_screen.dart';
+import 'package:lichess_mobile/src/widgets/platform.dart';
+import 'package:lichess_mobile/src/model/user/user.dart';
+import '../../utils.dart';
+
+class MockClient extends Mock implements http.Client {}
+
+class MockLogger extends Mock implements Logger {}
+
+void main() {
+  final mockClient = MockClient();
+  final mockLogger = MockLogger();
+
+  setUpAll(() {
+    when(
+      () => mockClient.get(
+        Uri.parse(
+          '$kLichessHost/api/games/user/$testUserId?max=10&moves=false&lastFen=true',
+        ),
+        headers: any(
+          named: 'headers',
+          that: sameHeaders({'Accept': 'application/x-ndjson'}),
+        ),
+      ),
+    ).thenAnswer((_) => mockResponse(userGameResponse, 200));
+
+    when(
+      () => mockClient.get(Uri.parse('$kLichessHost/api/user/$testUserId')),
+    ).thenAnswer((_) => mockResponse(testUserResponse, 200));
+  });
+
+  group('UserScreen', () {
+    testWidgets(
+      'should see recent games',
+      (WidgetTester tester) async {
+        final app = await buildTestApp(
+          tester,
+          home: Consumer(
+            builder: (context, ref, _) {
+              return const UserScreen(user: testUser);
+            },
+          ),
+        );
+
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              ...defaultProviderOverrides,
+              apiClientProvider
+                  .overrideWithValue(ApiClient(mockLogger, mockClient)),
+            ],
+            child: app,
+          ),
+        );
+
+        // wait for user request
+        await tester.pump(const Duration(milliseconds: 50));
+
+        // full name at the top
+        expect(
+          find.widgetWithText(ListTile, 'John Doe'),
+          findsOneWidget,
+        );
+
+        // wait for recent games
+        await tester.pump(const Duration(milliseconds: 50));
+
+        // opponent in recent games
+        expect(
+          find.widgetWithText(PlatformListTile, 'maia1 (1397)'),
+          findsOneWidget,
+        );
+        expect(
+          find.widgetWithText(PlatformListTile, 'maia1 (1399)'),
+          findsOneWidget,
+        );
+        expect(
+          find.widgetWithText(PlatformListTile, 'maia1 (1410)'),
+          findsOneWidget,
+        );
+      },
+      variant: kPlatformVariant,
+    );
+  });
+}
+
+const testUserName = 'FakeUserName';
+const testUserId = UserId('fakeuserid');
+const testUser = LightUser(id: testUserId, name: testUserName);
+final userGameResponse = '''
+{"id":"rfBxF2P5","rated":false,"variant":"standard","speed":"blitz","perf":"blitz","createdAt":1672074461465,"lastMoveAt":1672074683485,"status":"mate","players":{"white":{"user":{"name":"$testUserName","patron":true,"id":"$testUserId"},"rating":1178},"black":{"user":{"name":"maia1","title":"BOT","id":"maia1"},"rating":1397}},"winner":"white","clock":{"initial":300,"increment":3,"totalTime":420,"lastFen":"r7/pppk4/4p1B1/3pP3/6Pp/q1P1P1nP/P1QK1r2/R5R1 w - - 1 1"}}
+{"id":"msAKIkqp","rated":false,"variant":"standard","speed":"blitz","perf":"blitz","createdAt":1671791341158,"lastMoveAt":1671791589063,"status":"resign","players":{"white":{"user":{"name":"maia1","title":"BOT","id":"maia1"},"rating":1399},"black":{"user":{"name":"$testUserName","patron":true,"id":"$testUserId"},"rating":1178}},"winner":"white","clock":{"initial":300,"increment":3,"totalTime":420,"lastFen":"r7/pppk4/4p1B1/3pP3/6Pp/q1P1P1nP/P1QK1r2/R5R1 w - - 1 1"}}
+{"id":"7Jxi9mBF","rated":false,"variant":"standard","speed":"blitz","perf":"blitz","createdAt":1671100908073,"lastMoveAt":1671101322211,"status":"mate","players":{"white":{"user":{"name":"$testUserName","patron":true,"id":"$testUserId"},"rating":1178},"black":{"user":{"name":"maia1","title":"BOT","id":"maia1"},"rating":1410}},"winner":"white","clock":{"initial":300,"increment":3,"totalTime":420,"lastFen":"r7/pppk4/4p1B1/3pP3/6Pp/q1P1P1nP/P1QK1r2/R5R1 w - - 1 1"}}
+''';
+
+final testUserResponse = '''
+{
+  "id": "$testUserId",
+  "username": "$testUserName",
+  "createdAt": 1290415680000,
+  "seenAt": 1290415680000,
+  "title": "GM",
+  "patron": true,
+  "perfs": {
+    "blitz": {
+      "games": 2340,
+      "rating": 1681,
+      "rd": 30,
+      "prog": 10
+    },
+    "rapid": {
+      "games": 2340,
+      "rating": 1677,
+      "rd": 30,
+      "prog": 10
+    },
+    "classical": {
+      "games": 2340,
+      "rating": 1618,
+      "rd": 30,
+      "prog": 10
+    }
+  },
+  "profile": {
+    "country": "France",
+    "location": "Lille",
+    "bio": "test bio",
+    "firstName": "John",
+    "lastName": "Doe",
+    "fideRating": 1800,
+    "links": "http://test.com"
+  }
+}
+''';
