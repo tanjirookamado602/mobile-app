@@ -16,6 +16,8 @@ import 'package:lichess_mobile/src/widgets/player.dart';
 import 'package:timeago/timeago.dart' as timeago;
 
 class OngoingGamesScreen extends ConsumerWidget {
+  const OngoingGamesScreen({super.key});
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return ConsumerPlatformWidget(
