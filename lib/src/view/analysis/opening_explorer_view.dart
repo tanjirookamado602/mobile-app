@@ -1,6 +1,6 @@
+import 'package:dartchess/dartchess.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:lichess_mobile/src/model/analysis/analysis_controller.dart';
 import 'package:lichess_mobile/src/model/opening_explorer/opening_explorer.dart';
 import 'package:lichess_mobile/src/model/opening_explorer/opening_explorer_preferences.dart';
 import 'package:lichess_mobile/src/model/opening_explorer/opening_explorer_repository.dart';
@@ -17,10 +17,17 @@ const _kTableRowPadding = EdgeInsets.symmetric(
   vertical: _kTableRowVerticalPadding,
 );
 
+/// An analysis tab view that displays the opening explorer for the current position.
 class OpeningExplorerView extends ConsumerStatefulWidget {
-  const OpeningExplorerView({required this.options});
+  const OpeningExplorerView({
+    required this.ply,
+    required this.fen,
+    this.onMoveSelected,
+  });
 
-  final AnalysisOptions options;
+  final int ply;
+  final String fen;
+  final void Function(NormalMove)? onMoveSelected;
 
   @override
   ConsumerState<OpeningExplorerView> createState() => _OpeningExplorerState();
@@ -46,16 +53,11 @@ class _OpeningExplorerState extends ConsumerState<OpeningExplorerView> {
         ),
       ),
       online: () {
-        final analysisState =
-            ref.watch(analysisControllerProvider(widget.options)).requireValue;
-
-        if (analysisState.position.ply >= 50) {
-          return _OpeningExplorerView(
+        if (widget.ply >= 50) {
+          return const _OpeningExplorerView(
             isLoading: false,
             children: [
-              OpeningExplorerMoveTable.maxDepth(
-                options: widget.options,
-              ),
+              OpeningExplorerMoveTable.maxDepth(),
             ],
           );
         }
@@ -79,7 +81,7 @@ class _OpeningExplorerState extends ConsumerState<OpeningExplorerView> {
         }
 
         final cacheKey = OpeningExplorerCacheKey(
-          fen: analysisState.position.fen,
+          fen: widget.fen,
           prefs: prefs,
         );
         final cacheOpeningExplorer = cache[cacheKey];
@@ -88,12 +90,11 @@ class _OpeningExplorerState extends ConsumerState<OpeningExplorerView> {
                 (entry: cacheOpeningExplorer, isIndexing: false),
               )
             : ref.watch(
-                openingExplorerProvider(fen: analysisState.position.fen),
+                openingExplorerProvider(fen: widget.fen),
               );
 
         if (cacheOpeningExplorer == null) {
-          ref.listen(openingExplorerProvider(fen: analysisState.position.fen),
-              (_, curAsync) {
+          ref.listen(openingExplorerProvider(fen: widget.fen), (_, curAsync) {
             curAsync.whenData((cur) {
               if (cur != null && !cur.isIndexing) {
                 cache[cacheKey] = cur.entry;
@@ -112,12 +113,10 @@ class _OpeningExplorerState extends ConsumerState<OpeningExplorerView> {
               if (openingExplorer == null) {
                 return lastExplorerWidgets ??
                     [
-                      Shimmer(
+                      const Shimmer(
                         child: ShimmerLoading(
                           isLoading: true,
-                          child: OpeningExplorerMoveTable.loading(
-                            options: widget.options,
-                          ),
+                          child: OpeningExplorerMoveTable.loading(),
                         ),
                       ),
                     ];
@@ -126,7 +125,7 @@ class _OpeningExplorerState extends ConsumerState<OpeningExplorerView> {
               final topGames = openingExplorer.entry.topGames;
               final recentGames = openingExplorer.entry.recentGames;
 
-              final ply = analysisState.position.ply;
+              final ply = widget.ply;
 
               final children = [
                 OpeningExplorerMoveTable(
@@ -134,7 +133,7 @@ class _OpeningExplorerState extends ConsumerState<OpeningExplorerView> {
                   whiteWins: openingExplorer.entry.white,
                   draws: openingExplorer.entry.draws,
                   blackWins: openingExplorer.entry.black,
-                  options: widget.options,
+                  onMoveSelected: widget.onMoveSelected,
                 ),
                 if (topGames != null && topGames.isNotEmpty) ...[
                   OpeningExplorerHeaderTile(
@@ -189,12 +188,10 @@ class _OpeningExplorerState extends ConsumerState<OpeningExplorerView> {
             loading: () =>
                 lastExplorerWidgets ??
                 [
-                  Shimmer(
+                  const Shimmer(
                     child: ShimmerLoading(
                       isLoading: true,
-                      child: OpeningExplorerMoveTable.loading(
-                        options: widget.options,
-                      ),
+                      child: OpeningExplorerMoveTable.loading(),
                     ),
                   ),
                 ],
