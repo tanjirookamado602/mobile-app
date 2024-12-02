@@ -10,34 +10,11 @@ import 'package:lichess_mobile/src/widgets/board_table.dart';
 import '../test_helpers.dart';
 import '../test_provider_scope.dart';
 
-const surfaces = [
-  // https://www.browserstack.com/guide/common-screen-resolutions
-  // phones
-  Size(360, 800),
-  Size(390, 844),
-  Size(393, 873),
-  Size(412, 915),
-  Size(414, 896),
-  Size(360, 780),
-  // tablets
-  Size(600, 1024),
-  Size(810, 1080),
-  Size(820, 1180),
-  Size(1280, 800),
-  Size(800, 1280),
-  Size(601, 962),
-  // folded motorola
-  Size(564.7, 482.6),
-  // pixel fold unfolded
-  Size(701.0, 841.1),
-  Size(841.1, 701.0),
-];
-
 void main() {
   testWidgets(
     'board background size should match board size on all surfaces',
     (WidgetTester tester) async {
-      for (final surface in surfaces) {
+      for (final surface in kTestSurfaces) {
         final app = await makeTestProviderScope(
           key: ValueKey(surface),
           tester,
@@ -96,7 +73,7 @@ void main() {
   testWidgets(
     'board size and table side size should be harmonious on all surfaces',
     (WidgetTester tester) async {
-      for (final surface in surfaces) {
+      for (final surface in kTestSurfaces) {
         final app = await makeTestProviderScope(
           key: ValueKey(surface),
           tester,
@@ -141,10 +118,12 @@ void main() {
               tester.getSize(find.byKey(const ValueKey('top_table')));
           final bottomTableSize =
               tester.getSize(find.byKey(const ValueKey('bottom_table')));
-          final minBoardSize = (surface.longestSide / kGoldenRatio) - 32.0;
-          final maxBoardSize = surface.longestSide - 32.0;
+          final goldenBoardSize = (surface.longestSide / kGoldenRatio) - 32.0;
+          final defaultBoardSize = surface.shortestSide - 32.0;
+          final minBoardSize = min(goldenBoardSize, defaultBoardSize);
+          final maxBoardSize = max(goldenBoardSize, defaultBoardSize);
           final minSideWidth =
-              min(surface.longestSide - minBoardSize - 16.0 * 3, 250.0);
+              min(surface.longestSide - goldenBoardSize - 16.0 * 3, 250.0);
           expect(
             boardSize.width,
             greaterThanOrEqualTo(minBoardSize),
