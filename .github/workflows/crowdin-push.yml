@@ -9,6 +9,7 @@ on:
 
 jobs:
   crowdin-push:
+    if: "${{ secrets.CROWDIN_PROJECT_ID != '' }}"
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
